@@ -7,13 +7,16 @@ defmodule TheBeacon.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      # Starts a worker by calling: TheBeacon.Worker.start_link(arg)
-      # {TheBeacon.Worker, arg}
-    ]
+    children =
+      if Application.get_env(:the_beacon, :start_runtime, false) do
+        [
+          TheBeacon.Scheduler,
+          TheBeacon.Worker
+        ]
+      else
+        []
+      end
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: TheBeacon.Supervisor]
     Supervisor.start_link(children, opts)
   end
