@@ -1,8 +1,8 @@
-defmodule TheBeacon.Jobs.SquidMeshPayload do
+defmodule TheBeacon.Jobs.SquidiePayload do
   @moduledoc false
 
   use Bedrock.JobQueue.Job,
-    topic: "squid_mesh:payload",
+    topic: "squidie:payload",
     max_retries: 3,
     priority: 100
 

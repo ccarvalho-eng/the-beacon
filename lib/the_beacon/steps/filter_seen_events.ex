@@ -5,7 +5,7 @@ defmodule TheBeacon.Steps.FilterSeenEvents do
 
   @default_state_file "state/security-seen.txt"
 
-  use SquidMesh.Step,
+  use Squidie.Step,
     name: :filter_seen_events,
     description: "Filters advisories that were already delivered",
     input_schema: [

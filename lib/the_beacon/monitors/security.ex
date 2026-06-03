@@ -5,7 +5,7 @@ defmodule TheBeacon.Monitors.Security do
 
   @behaviour TheBeacon.Monitor
 
-  alias SquidMesh.Tools
+  alias Squidie.Tools
   alias TheBeacon.Event
 
   @default_osv_url "https://osv-vulnerabilities.storage.googleapis.com/Hex/all.zip"
@@ -111,7 +111,7 @@ defmodule TheBeacon.Monitors.Security do
     opts = Map.new(opts)
 
     %{
-      http_adapter: Map.get(opts, :http_adapter, SquidMesh.Tools.HTTP),
+      http_adapter: Map.get(opts, :http_adapter, Squidie.Tools.HTTP),
       osv_url: Map.get(opts, :osv_url, @default_osv_url),
       erlef_sitemap_url: Map.get(opts, :erlef_sitemap_url, @default_erlef_url),
       github_advisories_url: Map.get(opts, :github_advisories_url, @default_github_url)

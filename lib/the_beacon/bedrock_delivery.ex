@@ -1,10 +1,10 @@
 defmodule TheBeacon.BedrockDelivery do
   @moduledoc false
 
-  alias SquidMesh.Executor.Payload
+  alias Squidie.Executor.Payload
   alias TheBeacon.Workflows.SecurityCheck
 
-  @topic "squid_mesh:payload"
+  @topic "squidie:payload"
 
   @spec enqueue_security_check(keyword()) :: {:ok, map()} | {:error, term()}
   def enqueue_security_check(opts \\ []) do

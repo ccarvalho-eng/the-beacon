@@ -8,7 +8,7 @@ defmodule TheBeacon.JobQueue do
     repo: TheBeacon.BedrockRepo,
     workers: %{
       "beacon:schedule:security" => TheBeacon.Jobs.SecuritySchedule,
-      "squid_mesh:payload" => TheBeacon.Jobs.SquidMeshPayload
+      "squidie:payload" => TheBeacon.Jobs.SquidiePayload
     }
 
   @spec queue_id() :: String.t()

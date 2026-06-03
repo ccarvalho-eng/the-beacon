@@ -19,8 +19,8 @@ The application keeps the runtime small:
 
 ```text
 Bedrock JobQueue schedule job
-  -> Bedrock JobQueue Squid Mesh payload job
-  -> Squid Mesh security_check workflow
+  -> Bedrock JobQueue Squidie payload job
+  -> Squidie security_check workflow
      -> fetch_security_events
      -> filter_seen_events
      -> deliver_security_notifications
@@ -28,7 +28,7 @@ Bedrock JobQueue schedule job
 ```
 
 Bedrock JobQueue owns delayed visibility, job leases, retries, and worker
-recovery. Squid Mesh owns workflow execution state and step history.
+recovery. Squidie owns workflow execution state and step history.
 
 No Phoenix app, dashboard, or GitHub repository commits are required.
 
@@ -70,7 +70,7 @@ Discord’s own docs cover the moving UI details:
 - [Intro to webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
 - [Server integrations](https://support.discord.com/hc/en-us/articles/360045093012-Server-Integrations-Page)
 
-The security check schedule is declared by the Squid Mesh workflow:
+The security check schedule is declared by the Squidie workflow:
 
 ```elixir
 trigger :scheduled_security_check do
@@ -113,16 +113,16 @@ From IEx, trigger the security workflow manually:
 
 ```elixir
 {:ok, run} =
-  SquidMesh.start(
+  Squidie.start(
     TheBeacon.Workflows.SecurityCheck,
     :security_check,
     %{state_file: "state/security-seen.txt"}
   )
 
-SquidMesh.execute_next(owner_id: "manual-security-check")
+Squidie.execute_next(owner_id: "manual-security-check")
 ```
 
-Run `SquidMesh.execute_next/1` again until it returns `{:ok, :none}`.
+Run `Squidie.execute_next/1` again until it returns `{:ok, :none}`.
 
 The application starts the Bedrock cluster, Bedrock JobQueue, and schedule
 bootstrap by default. The bootstrap seeds the next security schedule job from
@@ -181,7 +181,7 @@ Useful checks while it runs:
 
 ```elixir
 TheBeacon.JobQueue.stats(TheBeacon.JobQueue.queue_id())
-SquidMesh.list_runs([], TheBeacon.Runtime.squid_mesh_opts())
+Squidie.list_runs([], TheBeacon.Runtime.squidie_opts())
 File.exists?("state/security-seen.txt")
 ```
 

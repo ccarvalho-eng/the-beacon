@@ -30,7 +30,7 @@ defmodule TheBeacon.MixProject do
       {:bedrock, "~> 0.4.0"},
       {:bedrock_job_queue, "~> 0.1.0"},
       {:jason, "~> 1.4"},
-      {:squid_mesh, "~> 0.1.1"}
+      {:squidie, "~> 0.1.2"}
     ]
   end
 

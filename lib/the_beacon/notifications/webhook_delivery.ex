@@ -5,7 +5,7 @@ defmodule TheBeacon.Notifications.WebhookDelivery do
 
   @behaviour TheBeacon.NotificationDelivery
 
-  alias SquidMesh.Tools
+  alias Squidie.Tools
 
   @max_content_length 2_000
   @message_header "### New Elixir ecosystem vulnerability findings\n\n"
@@ -34,7 +34,7 @@ defmodule TheBeacon.Notifications.WebhookDelivery do
     opts = Map.new(opts)
 
     %{
-      http_adapter: Map.get(opts, :http_adapter, SquidMesh.Tools.HTTP),
+      http_adapter: Map.get(opts, :http_adapter, Squidie.Tools.HTTP),
       webhooks: Map.get(opts, :webhooks, configured_webhooks())
     }
   end
