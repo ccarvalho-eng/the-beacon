@@ -54,6 +54,7 @@ defmodule TheBeacon.Workflows.SecurityCheck do
         new_count: [:unseen_security_events, :new_count]
       ],
       output: :delivered_security_events,
+      irreversible: true,
       retry: [max_attempts: 3, backoff: [type: :exponential, min: 1_000, max: 30_000]]
     )
 
