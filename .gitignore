@@ -24,3 +24,6 @@ the_beacon-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Local runtime secrets.
+.env.local
