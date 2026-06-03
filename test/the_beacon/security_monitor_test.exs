@@ -29,6 +29,27 @@ defmodule TheBeacon.SecurityMonitorTest do
        }}
     end
 
+    def invoke(%{method: :get, url: "https://osv.test/Hex/unzipped"} = request, _context, _opts) do
+      send(self(), {:osv_request, request})
+
+      {:ok,
+       %Result{
+         adapter: __MODULE__,
+         payload: %{
+           status: 200,
+           body:
+             zip_entries([
+               {"OSV-2026-2.json",
+                %{
+                  "id" => "OSV-2026-2",
+                  "summary" => "decoded archive issue",
+                  "aliases" => ["CVE-2026-0003"]
+                }}
+             ])
+         }
+       }}
+    end
+
     def invoke(%{method: :get, url: "https://cna.erlef.org/sitemap.xml"}, _context, _opts) do
       {:ok,
        %Result{
@@ -62,13 +83,19 @@ defmodule TheBeacon.SecurityMonitorTest do
     end
 
     defp zip(entries) do
-      files =
-        Enum.map(entries, fn {path, contents} ->
-          {String.to_charlist(path), Jason.encode!(contents)}
-        end)
-
-      {:ok, {_name, archive}} = :zip.create(~c"osv.zip", files, [:memory])
+      {:ok, {_name, archive}} = :zip.create(~c"osv.zip", files(entries), [:memory])
       archive
+    end
+
+    defp zip_entries(entries) do
+      {:ok, files} = :zip.unzip(zip(entries), [:memory])
+      files
+    end
+
+    defp files(entries) do
+      Enum.map(entries, fn {path, contents} ->
+        {String.to_charlist(path), Jason.encode!(contents)}
+      end)
     end
   end
 
@@ -93,6 +120,24 @@ defmodule TheBeacon.SecurityMonitorTest do
              "OSV",
              "ERLEF CNA",
              "GitHub Advisory Database"
+           ]
+  end
+
+  test "collects OSV events when HTTP returns decoded zip entries" do
+    assert {:ok, events} =
+             Security.check(
+               http_adapter: FakeHTTP,
+               osv_url: "https://osv.test/Hex/unzipped",
+               erlef_sitemap_url: "https://cna.erlef.org/sitemap.xml",
+               github_advisories_url: "https://api.github.test/advisories"
+             )
+
+    assert_receive {:osv_request, %{method: :get, url: "https://osv.test/Hex/unzipped"}}
+
+    assert Enum.map(events, & &1.id) == [
+             "OSV-2026-2",
+             "CVE-2026-0002",
+             "GHSA-2026-1"
            ]
   end
 end

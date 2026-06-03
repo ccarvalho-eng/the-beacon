@@ -1,7 +1,10 @@
 defmodule TheBeacon.BedrockScheduler do
   @moduledoc false
 
+  alias TheBeacon.Workflows.SecurityCheck
+
   @topic "beacon:schedule:security"
+  @security_trigger :scheduled_security_check
 
   @spec perform(map(), keyword()) :: {:ok, :scheduled} | {:error, term()}
   def perform(payload, opts \\ []) do
@@ -18,7 +21,7 @@ defmodule TheBeacon.BedrockScheduler do
 
   @spec enqueue_next_security_schedule(keyword()) :: {:ok, map()} | {:error, term()}
   def enqueue_next_security_schedule(opts \\ []) do
-    cron_expression = Keyword.get(opts, :cron_expression, TheBeacon.Config.security_cron())
+    cron_expression = security_cron()
 
     with {:ok, scheduled_for} <-
            next_run(cron_expression, Keyword.get(opts, :now, DateTime.utc_now())) do
@@ -93,6 +96,19 @@ defmodule TheBeacon.BedrockScheduler do
   end
 
   defp queue_id do
-    Application.get_env(:the_beacon, :job_queue_id, "default")
+    TheBeacon.JobQueue.queue_id()
+  end
+
+  defp security_cron do
+    SecurityCheck
+    |> SquidMesh.Workflow.Info.triggers()
+    |> Enum.find(&(&1.name == @security_trigger))
+    |> case do
+      %{type: :cron, config: %{expression: expression}} when is_binary(expression) ->
+        expression
+
+      trigger ->
+        raise "missing cron expression for #{inspect(@security_trigger)} trigger: #{inspect(trigger)}"
+    end
   end
 end

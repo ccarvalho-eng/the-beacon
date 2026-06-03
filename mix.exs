@@ -20,10 +20,8 @@ defmodule TheBeacon.MixProject do
 
   # Run "mix help compile.app" to learn about applications.
   def application do
-    [
-      extra_applications: [:logger],
-      mod: {TheBeacon.Application, []}
-    ]
+    [extra_applications: [:logger]]
+    |> Keyword.merge(application_mod())
   end
 
   # Run "mix help deps" to learn about dependencies.
@@ -34,6 +32,14 @@ defmodule TheBeacon.MixProject do
       {:jason, "~> 1.4"},
       {:squid_mesh, "~> 0.1.1"}
     ]
+  end
+
+  defp application_mod do
+    if Mix.env() == :test do
+      []
+    else
+      [mod: {TheBeacon.Application, []}]
+    end
   end
 
   defp aliases do

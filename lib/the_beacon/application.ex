@@ -7,22 +7,20 @@ defmodule TheBeacon.Application do
 
   @impl true
   def start(_type, _args) do
+    TheBeacon.Runtime.configure_squid_mesh!()
+
     opts = [strategy: :one_for_one, name: TheBeacon.Supervisor]
     Supervisor.start_link(runtime_children(), opts)
   end
 
   @spec runtime_children() :: [Supervisor.child_spec()]
   def runtime_children do
-    if Application.get_env(:the_beacon, :start_runtime, false) do
-      [
-        {TheBeacon.BedrockCluster, []},
-        {TheBeacon.JobQueue,
-         concurrency: job_queue_concurrency(), batch_size: job_queue_batch_size()},
-        TheBeacon.ScheduleBootstrap
-      ]
-    else
-      []
-    end
+    [
+      {TheBeacon.BedrockCluster, []},
+      {TheBeacon.JobQueue,
+       concurrency: job_queue_concurrency(), batch_size: job_queue_batch_size()},
+      TheBeacon.ScheduleBootstrap
+    ]
   end
 
   defp job_queue_concurrency do

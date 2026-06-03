@@ -46,7 +46,19 @@ defmodule TheBeacon.WorkflowTest do
     assert :security_check in trigger_names
     assert :scheduled_security_check in trigger_names
 
-    assert Enum.map(spec.steps, & &1.name) == [:run_security_check]
+    assert Enum.map(spec.steps, & &1.name) == [
+             :fetch_security_events,
+             :filter_seen_events,
+             :deliver_security_notifications,
+             :mark_seen_events
+           ]
+
+    assert Enum.map(spec.transitions, &{&1.from, &1.on, &1.to}) == [
+             {:fetch_security_events, :ok, :filter_seen_events},
+             {:filter_seen_events, :ok, :deliver_security_notifications},
+             {:deliver_security_notifications, :ok, :mark_seen_events},
+             {:mark_seen_events, :ok, :complete}
+           ]
   end
 
   test "bedrock scheduler enqueues the next schedule and a Squid Mesh payload job" do
@@ -85,12 +97,11 @@ defmodule TheBeacon.WorkflowTest do
     assert_receive :drained_once
   end
 
-  test "schedule bootstrap seeds the next Bedrock schedule job" do
+  test "schedule bootstrap seeds from the workflow cron definition" do
     assert {:ok, %{scheduled_for: ~U[2026-06-02 12:30:00Z]}} =
              TheBeacon.ScheduleBootstrap.seed(
                job_queue: FakeJobQueue,
                queue_id: "security",
-               cron_expression: "*/15 * * * *",
                now: ~U[2026-06-02 12:16:00Z]
              )
 
@@ -99,16 +110,29 @@ defmodule TheBeacon.WorkflowTest do
                     [at: ~U[2026-06-02 12:30:00Z], id: "security-schedule:2026-06-02T12:30:00Z"]}
   end
 
-  test "application runtime children use Bedrock JobQueue instead of a local scheduler" do
-    Application.put_env(:the_beacon, :start_runtime, true)
+  test "bedrock producers default to the security queue" do
+    scheduled_for = ~U[2026-06-02 12:15:00Z]
 
-    on_exit(fn ->
-      Application.delete_env(:the_beacon, :start_runtime)
-    end)
+    assert {:ok, %{queue: "security"}} =
+             TheBeacon.BedrockScheduler.enqueue_next_security_schedule(
+               job_queue: FakeJobQueue,
+               now: scheduled_for
+             )
 
+    assert_receive {:enqueued, "security", "beacon:schedule:security", _payload, _opts}
+
+    assert {:ok, %{queue: "security"}} =
+             TheBeacon.BedrockDelivery.enqueue_security_check(
+               job_queue: FakeJobQueue,
+               scheduled_for: scheduled_for
+             )
+
+    assert_receive {:enqueued, "security", "squid_mesh:payload", _payload, _opts}
+  end
+
+  test "application runtime children start by default with Bedrock JobQueue" do
     child_ids =
-      TheBeacon.Application.runtime_children()
-      |> Enum.map(fn
+      Enum.map(TheBeacon.Application.runtime_children(), fn
         {module, _opts} -> module
         module when is_atom(module) -> module
       end)
@@ -118,6 +142,26 @@ defmodule TheBeacon.WorkflowTest do
     assert TheBeacon.ScheduleBootstrap in child_ids
     refute TheBeacon.Scheduler in child_ids
     refute TheBeacon.Worker in child_ids
+  end
+
+  test "application configures Squid Mesh runtime for manual workflow starts" do
+    previous_repo = Application.get_env(:squid_mesh, :repo)
+    previous_journal_storage = Application.get_env(:squid_mesh, :journal_storage)
+
+    Application.delete_env(:squid_mesh, :repo)
+    Application.delete_env(:squid_mesh, :journal_storage)
+
+    on_exit(fn ->
+      restore_env(:repo, previous_repo)
+      restore_env(:journal_storage, previous_journal_storage)
+    end)
+
+    TheBeacon.Runtime.configure_squid_mesh!()
+
+    assert Application.get_env(:squid_mesh, :repo) == TheBeacon.BedrockRepo
+
+    assert {Jido.Storage.File, path: "tmp/squid_mesh_journal"} =
+             Application.get_env(:squid_mesh, :journal_storage)
   end
 
   test "bedrock queue uses concrete Bedrock JobQueue workers" do
@@ -136,4 +180,7 @@ defmodule TheBeacon.WorkflowTest do
     assert %{topic: "squid_mesh:payload", max_retries: 3, priority: 100} =
              TheBeacon.Jobs.SquidMeshPayload.__job_config__()
   end
+
+  defp restore_env(_key, nil), do: :ok
+  defp restore_env(key, value), do: Application.put_env(:squid_mesh, key, value)
 end

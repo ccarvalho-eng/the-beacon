@@ -5,6 +5,13 @@ defmodule TheBeacon.Runtime do
 
   alias SquidMesh.Runtime.Runner
 
+  @spec configure_squid_mesh!() :: :ok
+  def configure_squid_mesh! do
+    Enum.each(squid_mesh_opts(), fn {key, value} ->
+      Application.put_env(:squid_mesh, key, value)
+    end)
+  end
+
   @spec deliver_payload(map()) :: :ok | {:ok, term()} | {:error, term()}
   def deliver_payload(payload) when is_map(payload) do
     Runner.perform(payload, squid_mesh_opts())
@@ -23,6 +30,7 @@ defmodule TheBeacon.Runtime do
   @spec squid_mesh_opts() :: keyword()
   def squid_mesh_opts do
     [
+      repo: TheBeacon.BedrockRepo,
       journal_storage:
         {Jido.Storage.File,
          path:

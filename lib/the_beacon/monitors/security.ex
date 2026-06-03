@@ -134,6 +134,17 @@ defmodule TheBeacon.Monitors.Security do
     end
   end
 
+  defp unzip(files) when is_list(files) do
+    if Enum.all?(files, &zip_entry?/1) do
+      {:ok, files}
+    else
+      {:error, {:invalid_osv_archive, :invalid_entries}}
+    end
+  end
+
+  defp zip_entry?({path, contents}) when is_list(path) and is_binary(contents), do: true
+  defp zip_entry?(_entry), do: false
+
   defp body(%{payload: %{body: body}}), do: body
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value

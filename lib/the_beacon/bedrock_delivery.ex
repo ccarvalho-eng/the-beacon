@@ -51,6 +51,6 @@ defmodule TheBeacon.BedrockDelivery do
   end
 
   defp queue_id do
-    Application.get_env(:the_beacon, :job_queue_id, "default")
+    TheBeacon.JobQueue.queue_id()
   end
 end
