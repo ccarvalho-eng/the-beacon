@@ -18,9 +18,19 @@ defmodule TheBeacon.Steps.FilterSeenEvents do
       new_count: [type: :integer, required: true]
     ]
 
+  require Logger
+
   @impl true
   def run(%{events: events} = input, _context) do
-    unseen_events = TheBeacon.SeenState.File.unseen(state_file(input), events)
+    state_file = state_file(input)
+    unseen_events = TheBeacon.SeenState.File.unseen(state_file, events)
+
+    Logger.info(
+      "Filtered security events against seen state",
+      checked_count: length(events),
+      new_count: length(unseen_events),
+      state_file: state_file
+    )
 
     {:ok,
      %{

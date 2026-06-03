@@ -10,7 +10,7 @@ defmodule TheBeacon.SeenState.File do
   @spec unseen(path(), [Event.t()]) :: [Event.t()]
   def unseen(path, events) when is_binary(path) and is_list(events) do
     seen_ids = read(path)
-    Enum.reject(events, &MapSet.member?(seen_ids, &1.id))
+    Enum.reject(events, fn event -> MapSet.member?(seen_ids, event_id(event)) end)
   end
 
   @spec mark_seen(path(), [String.t()] | [Event.t()]) :: :ok
@@ -50,5 +50,7 @@ defmodule TheBeacon.SeenState.File do
   end
 
   defp event_id(%Event{id: id}), do: id
+  defp event_id(%{id: id}) when is_binary(id), do: id
+  defp event_id(%{"id" => id}) when is_binary(id), do: id
   defp event_id(id) when is_binary(id), do: id
 end

@@ -65,6 +65,31 @@ defmodule TheBeacon.SecurityStepsTest do
     refute SeenFile.seen?(path, undelivered)
   end
 
+  test "mark seen accepts serialized advisory maps from workflow context" do
+    path = state_file()
+
+    delivered = %{
+      "id" => "GHSA-serialized",
+      "source" => "GitHub",
+      "title" => "serialized",
+      "url" => "https://ghsa.test/serialized"
+    }
+
+    assert {:ok, %{checked_count: 1, new_count: 1, delivered_count: 1}} =
+             MarkSeenEvents.run(
+               %{
+                 state_file: path,
+                 events: [delivered],
+                 checked_count: 1,
+                 new_count: 1,
+                 delivered_count: 1
+               },
+               %{}
+             )
+
+    assert SeenFile.seen?(path, "GHSA-serialized")
+  end
+
   defp state_file do
     path =
       Path.join(

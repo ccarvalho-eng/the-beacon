@@ -20,7 +20,7 @@ defmodule TheBeacon.SeenState.Memory do
   @spec unseen(pid(), [TheBeacon.Event.t()]) :: [TheBeacon.Event.t()]
   def unseen(pid, events) when is_pid(pid) and is_list(events) do
     Agent.get(pid, fn seen_ids ->
-      Enum.reject(events, &MapSet.member?(seen_ids, &1.id))
+      Enum.reject(events, fn event -> MapSet.member?(seen_ids, event_id(event)) end)
     end)
   end
 
@@ -39,5 +39,7 @@ defmodule TheBeacon.SeenState.Memory do
   end
 
   defp event_id(%TheBeacon.Event{id: id}), do: id
+  defp event_id(%{id: id}) when is_binary(id), do: id
+  defp event_id(%{"id" => id}) when is_binary(id), do: id
   defp event_id(id) when is_binary(id), do: id
 end

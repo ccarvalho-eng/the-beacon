@@ -21,4 +21,26 @@ defmodule TheBeacon.SeenStateFileTest do
     assert SeenFile.seen?(path, "B")
     assert File.read!(path) == "A\nB\n"
   end
+
+  test "stores seen event ids from serialized event maps" do
+    path =
+      Path.join(System.tmp_dir!(), "the-beacon-seen-#{System.unique_integer([:positive])}.txt")
+
+    on_exit(fn -> File.rm(path) end)
+
+    events = [
+      %{id: "ATOM-MAP", source: "OSV", title: "atom map", url: "https://example.test/atom"},
+      %{
+        "id" => "STRING-MAP",
+        "source" => "GitHub",
+        "title" => "string map",
+        "url" => "https://example.test/string"
+      }
+    ]
+
+    assert :ok = SeenFile.mark_seen(path, events)
+    assert SeenFile.seen?(path, "ATOM-MAP")
+    assert SeenFile.seen?(path, "STRING-MAP")
+    assert File.read!(path) == "ATOM-MAP\nSTRING-MAP\n"
+  end
 end
