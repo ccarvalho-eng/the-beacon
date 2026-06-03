@@ -8,11 +8,7 @@ defmodule TheBeacon.SecurityMonitorTest do
     @behaviour SquidMesh.Tools.Adapter
 
     @impl true
-    def invoke(
-          %{method: :post, url: "https://api.osv.dev/v1/querybatch"} = request,
-          _context,
-          _opts
-        ) do
+    def invoke(%{method: :get, url: "https://osv.test/Hex/all.zip"} = request, _context, _opts) do
       send(self(), {:osv_request, request})
 
       {:ok,
@@ -20,19 +16,15 @@ defmodule TheBeacon.SecurityMonitorTest do
          adapter: __MODULE__,
          payload: %{
            status: 200,
-           body: %{
-             "results" => [
-               %{
-                 "vulns" => [
-                   %{
-                     "id" => "OSV-2026-1",
-                     "summary" => "phoenix issue",
-                     "aliases" => ["CVE-2026-0001"]
-                   }
-                 ]
-               }
-             ]
-           }
+           body:
+             zip([
+               {"OSV-2026-1.json",
+                %{
+                  "id" => "OSV-2026-1",
+                  "summary" => "phoenix issue",
+                  "aliases" => ["CVE-2026-0001"]
+                }}
+             ])
          }
        }}
     end
@@ -68,25 +60,28 @@ defmodule TheBeacon.SecurityMonitorTest do
          }
        }}
     end
+
+    defp zip(entries) do
+      files =
+        Enum.map(entries, fn {path, contents} ->
+          {String.to_charlist(path), Jason.encode!(contents)}
+        end)
+
+      {:ok, {_name, archive}} = :zip.create(~c"osv.zip", files, [:memory])
+      archive
+    end
   end
 
   test "collects OSV, ERLEF CNA, and GitHub advisory events" do
     assert {:ok, events} =
              Security.check(
                http_adapter: FakeHTTP,
-               osv_watchlist: [%{ecosystem: "Hex", name: "phoenix"}],
+               osv_url: "https://osv.test/Hex/all.zip",
                erlef_sitemap_url: "https://cna.erlef.org/sitemap.xml",
                github_advisories_url: "https://api.github.test/advisories"
              )
 
-    assert_receive {:osv_request,
-                    %{
-                      json: %{
-                        queries: [
-                          %{package: %{ecosystem: "Hex", name: "phoenix"}}
-                        ]
-                      }
-                    }}
+    assert_receive {:osv_request, %{method: :get, url: "https://osv.test/Hex/all.zip"}}
 
     assert Enum.map(events, & &1.id) == [
              "OSV-2026-1",

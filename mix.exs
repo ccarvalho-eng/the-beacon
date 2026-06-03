@@ -29,6 +29,9 @@ defmodule TheBeacon.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:bedrock, "~> 0.4.0"},
+      {:bedrock_job_queue, "~> 0.1.0"},
+      {:jason, "~> 1.4"},
       {:squid_mesh, "~> 0.1.1"}
     ]
   end

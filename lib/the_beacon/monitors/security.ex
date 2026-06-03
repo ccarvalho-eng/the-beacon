@@ -8,7 +8,7 @@ defmodule TheBeacon.Monitors.Security do
   alias SquidMesh.Tools
   alias TheBeacon.Event
 
-  @default_osv_url "https://api.osv.dev/v1/querybatch"
+  @default_osv_url "https://osv-vulnerabilities.storage.googleapis.com/Hex/all.zip"
   @default_erlef_url "https://cna.erlef.org/sitemap.xml"
   @default_github_url "https://api.github.com/advisories?ecosystem=erlang&per_page=30&sort=updated&direction=desc"
 
@@ -25,27 +25,16 @@ defmodule TheBeacon.Monitors.Security do
 
   defp fetch_osv(opts) do
     request = %{
-      method: :post,
-      url: opts.osv_url,
-      json: %{
-        queries:
-          Enum.map(opts.osv_watchlist, fn package ->
-            %{package: %{ecosystem: package.ecosystem, name: package.name}}
-          end)
-      }
+      method: :get,
+      url: opts.osv_url
     }
 
-    with {:ok, result} <- Tools.invoke(opts.http_adapter, request, %{}) do
-      results = body(result) |> Map.get("results", [])
-
+    with {:ok, result} <- Tools.invoke(opts.http_adapter, request, %{}),
+         {:ok, vulnerabilities} <- decode_osv_archive(body(result)) do
       events =
-        results
-        |> Enum.zip(opts.osv_watchlist)
-        |> Enum.flat_map(fn {result, package} ->
-          result
-          |> Map.get("vulns", [])
-          |> Enum.map(&osv_event(package, &1))
-        end)
+        vulnerabilities
+        |> Enum.map(&osv_event/1)
+        |> Enum.sort_by(& &1.id)
 
       {:ok, events}
     end
@@ -85,14 +74,14 @@ defmodule TheBeacon.Monitors.Security do
     end
   end
 
-  defp osv_event(package, vuln) do
+  defp osv_event(vuln) do
     aliases = Map.get(vuln, "aliases", [])
     details = aliases |> Enum.join(", ") |> blank_to_nil()
 
     %Event{
       id: Map.fetch!(vuln, "id"),
       source: "OSV",
-      title: Map.get(vuln, "summary") || Map.get(vuln, "details") || package.name,
+      title: Map.get(vuln, "summary") || Map.get(vuln, "details") || Map.fetch!(vuln, "id"),
       url: "https://osv.dev/vulnerability/#{Map.fetch!(vuln, "id")}",
       details: details
     }
@@ -124,31 +113,25 @@ defmodule TheBeacon.Monitors.Security do
     %{
       http_adapter: Map.get(opts, :http_adapter, SquidMesh.Tools.HTTP),
       osv_url: Map.get(opts, :osv_url, @default_osv_url),
-      osv_watchlist: normalize_watchlist(Map.get(opts, :osv_watchlist, default_watchlist())),
       erlef_sitemap_url: Map.get(opts, :erlef_sitemap_url, @default_erlef_url),
       github_advisories_url: Map.get(opts, :github_advisories_url, @default_github_url)
     }
   end
 
-  defp normalize_watchlist(packages) do
-    Enum.map(packages, fn package ->
-      package
-      |> Map.new()
-      |> then(&%{ecosystem: Map.fetch!(&1, :ecosystem), name: Map.fetch!(&1, :name)})
-    end)
+  defp decode_osv_archive(archive) do
+    with {:ok, files} <- unzip(archive) do
+      files
+      |> Enum.filter(fn {path, _contents} -> Path.extname(to_string(path)) == ".json" end)
+      |> Enum.map(fn {_path, contents} -> Jason.decode!(contents) end)
+      |> then(&{:ok, &1})
+    end
   end
 
-  defp default_watchlist do
-    [
-      %{ecosystem: "Hex", name: "phoenix"},
-      %{ecosystem: "Hex", name: "plug"},
-      %{ecosystem: "Hex", name: "cowboy"},
-      %{ecosystem: "Hex", name: "bandit"},
-      %{ecosystem: "Hex", name: "ecto"},
-      %{ecosystem: "Hex", name: "oban"},
-      %{ecosystem: "Hex", name: "jido"},
-      %{ecosystem: "Hex", name: "bedrock"}
-    ]
+  defp unzip(archive) when is_binary(archive) do
+    case :zip.unzip(archive, [:memory]) do
+      {:ok, files} -> {:ok, files}
+      {:error, reason} -> {:error, {:invalid_osv_archive, reason}}
+    end
   end
 
   defp body(%{payload: %{body: body}}), do: body

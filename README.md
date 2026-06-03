@@ -4,7 +4,7 @@ The Beacon is a plain OTP monitoring app built around a Squid Mesh workflow.
 
 V1 focuses on Elixir ecosystem security advisories:
 
-- OSV package watchlist
+- OSV Hex ecosystem export
 - ERLEF CNA CVE sitemap
 - GitHub Security Advisories for the Erlang ecosystem
 - webhook notification delivery
@@ -17,12 +17,16 @@ Only successfully delivered advisories are marked seen.
 The application keeps the runtime small:
 
 ```text
-OTP scheduler
+Bedrock JobQueue schedule job
+  -> Bedrock JobQueue Squid Mesh payload job
   -> Squid Mesh security_check workflow
   -> security advisory monitor
   -> webhook delivery
   -> file-backed seen state
 ```
+
+Bedrock JobQueue owns delayed visibility, job leases, retries, and worker
+recovery. Squid Mesh owns workflow execution state and step history.
 
 No Phoenix app, dashboard, or GitHub repository commits are required.
 
@@ -41,6 +45,7 @@ Enable the runtime children in application config:
 ```elixir
 config :the_beacon,
   start_runtime: true,
+  job_queue_id: "security",
   squid_mesh_journal_path: "tmp/squid_mesh_journal"
 ```
 

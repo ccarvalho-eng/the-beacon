@@ -7,17 +7,29 @@ defmodule TheBeacon.Application do
 
   @impl true
   def start(_type, _args) do
-    children =
-      if Application.get_env(:the_beacon, :start_runtime, false) do
-        [
-          TheBeacon.Scheduler,
-          TheBeacon.Worker
-        ]
-      else
-        []
-      end
-
     opts = [strategy: :one_for_one, name: TheBeacon.Supervisor]
-    Supervisor.start_link(children, opts)
+    Supervisor.start_link(runtime_children(), opts)
+  end
+
+  @spec runtime_children() :: [Supervisor.child_spec()]
+  def runtime_children do
+    if Application.get_env(:the_beacon, :start_runtime, false) do
+      [
+        {TheBeacon.BedrockCluster, []},
+        {TheBeacon.JobQueue,
+         concurrency: job_queue_concurrency(), batch_size: job_queue_batch_size()},
+        TheBeacon.ScheduleBootstrap
+      ]
+    else
+      []
+    end
+  end
+
+  defp job_queue_concurrency do
+    Application.get_env(:the_beacon, :job_queue_concurrency, System.schedulers_online())
+  end
+
+  defp job_queue_batch_size do
+    Application.get_env(:the_beacon, :job_queue_batch_size, 10)
   end
 end
