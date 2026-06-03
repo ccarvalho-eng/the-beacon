@@ -46,6 +46,13 @@ defmodule TheBeacon.WorkflowTest do
     assert :security_check in trigger_names
     assert :scheduled_security_check in trigger_names
 
+    assert Enum.all?(
+             spec.triggers,
+             &(&1.payload == [
+                 %{name: :state_file, opts: [default: "state/security-seen.txt"], type: :string}
+               ])
+           )
+
     assert Enum.map(spec.steps, & &1.name) == [
              :fetch_security_events,
              :filter_seen_events,

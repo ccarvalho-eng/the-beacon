@@ -7,7 +7,6 @@ defmodule TheBeacon.Steps.DeliverSecurityNotifications do
     name: :deliver_security_notifications,
     description: "Sends webhook notifications for unseen security advisories",
     input_schema: [
-      webhooks: [type: :list, required: false],
       events: [type: :list, required: true],
       checked_count: [type: :integer, required: true],
       new_count: [type: :integer, required: true]
@@ -21,9 +20,7 @@ defmodule TheBeacon.Steps.DeliverSecurityNotifications do
 
   @impl true
   def run(%{events: events} = input, _context) do
-    opts = %{webhooks: webhooks(input)}
-
-    case TheBeacon.Notifications.WebhookDelivery.deliver(events, opts) do
+    case TheBeacon.Notifications.WebhookDelivery.deliver(events, %{}) do
       :ok ->
         {:ok,
          %{
@@ -37,7 +34,4 @@ defmodule TheBeacon.Steps.DeliverSecurityNotifications do
         {:retry, reason}
     end
   end
-
-  defp webhooks(%{webhooks: [_ | _] = webhooks}), do: webhooks
-  defp webhooks(_input), do: TheBeacon.Config.webhooks()
 end

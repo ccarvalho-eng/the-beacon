@@ -84,7 +84,7 @@ From IEx, trigger the security workflow manually:
   SquidMesh.start(
     TheBeacon.Workflows.SecurityCheck,
     :security_check,
-    %{state_file: "state/security-seen.txt", webhooks: TheBeacon.Config.webhooks()}
+    %{state_file: "state/security-seen.txt"}
   )
 
 SquidMesh.execute_next(owner_id: "manual-security-check")

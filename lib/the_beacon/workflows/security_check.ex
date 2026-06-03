@@ -18,7 +18,6 @@ defmodule TheBeacon.Workflows.SecurityCheck do
 
       payload do
         field(:state_file, :string, default: "state/security-seen.txt")
-        field(:webhooks, :list, default: [])
       end
     end
 
@@ -27,7 +26,6 @@ defmodule TheBeacon.Workflows.SecurityCheck do
 
       payload do
         field(:state_file, :string, default: "state/security-seen.txt")
-        field(:webhooks, :list, default: [])
       end
     end
 
@@ -46,7 +44,6 @@ defmodule TheBeacon.Workflows.SecurityCheck do
 
     step(:deliver_security_notifications, DeliverSecurityNotifications,
       input: [
-        webhooks: [:webhooks],
         events: [:unseen_security_events, :events],
         checked_count: [:unseen_security_events, :checked_count],
         new_count: [:unseen_security_events, :new_count]
