@@ -188,6 +188,18 @@ defmodule TheBeacon.WorkflowTest do
              Application.get_env(:squid_mesh, :journal_storage)
   end
 
+  test "runtime drains with public Squid Mesh execute options" do
+    opts =
+      TheBeacon.Runtime.execute_next_opts(owner_id: "test-worker", heartbeat_interval_ms: 1_000)
+
+    refute Keyword.has_key?(opts, :repo)
+    assert Keyword.fetch!(opts, :owner_id) == "test-worker"
+    assert Keyword.fetch!(opts, :heartbeat_interval_ms) == 1_000
+
+    assert {Jido.Storage.File, path: "tmp/squid_mesh_journal"} =
+             Keyword.fetch!(opts, :journal_storage)
+  end
+
   test "bedrock queue uses concrete Bedrock JobQueue workers" do
     assert %{
              otp_app: :the_beacon,

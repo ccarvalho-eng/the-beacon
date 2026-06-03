@@ -19,12 +19,16 @@ defmodule TheBeacon.Runtime do
 
   @spec drain_once(keyword()) :: SquidMesh.Executor.execute_result()
   def drain_once(opts \\ []) do
-    opts =
-      opts
-      |> Keyword.put_new(:owner_id, "the-beacon")
-      |> Keyword.merge(squid_mesh_opts())
+    SquidMesh.execute_next(execute_next_opts(opts))
+  end
 
-    SquidMesh.execute_next(opts)
+  @doc false
+  @spec execute_next_opts(keyword()) :: keyword()
+  def execute_next_opts(opts \\ []) do
+    squid_mesh_opts()
+    |> Keyword.take([:runtime, :journal_storage, :queue])
+    |> Keyword.merge(opts)
+    |> Keyword.put_new(:owner_id, "the-beacon")
   end
 
   @spec squid_mesh_opts() :: keyword()
