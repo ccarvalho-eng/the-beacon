@@ -1,7 +1,6 @@
 # The Beacon
 
-The Beacon is a plain OTP monitoring app that replaces the private
-`ops-notifications` GitHub Actions loop with a Squid Mesh workflow.
+The Beacon is a plain OTP monitoring app built around a Squid Mesh workflow.
 
 V1 focuses on Elixir ecosystem security advisories:
 
@@ -52,13 +51,3 @@ mix run --no-halt
 ```
 
 For tests and local module checks, runtime children stay disabled by default.
-
-## ops-notifications Mapping
-
-| ops-notifications | The Beacon |
-| --- | --- |
-| GitHub Actions schedule | `TheBeacon.Scheduler` |
-| workflow shell/Python steps | Squid Mesh workflow step |
-| committed `state/elixir-osv-seen.txt` | file-backed seen state |
-| `curl`/`jq` webhook post | `SquidMesh.Tools.HTTP` |
-| `DISCORD_WEBHOOK_SECURITY` | `BEACON_WEBHOOKS` |

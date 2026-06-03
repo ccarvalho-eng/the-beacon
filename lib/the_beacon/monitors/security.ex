@@ -1,6 +1,6 @@
 defmodule TheBeacon.Monitors.Security do
   @moduledoc """
-  Security advisory monitor based on the original ops-notifications workflow.
+  Security advisory monitor for Elixir ecosystem sources.
   """
 
   @behaviour TheBeacon.Monitor

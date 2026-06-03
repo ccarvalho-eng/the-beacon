@@ -20,7 +20,7 @@ defmodule TheBeacon.WebhookDeliveryTest do
     end
   end
 
-  test "posts one ops-notifications style message to every configured webhook" do
+  test "posts one security notification message to every configured webhook" do
     event = %Event{
       id: "GHSA-2026-1",
       source: "GitHub Advisory Database",

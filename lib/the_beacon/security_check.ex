@@ -1,6 +1,6 @@
 defmodule TheBeacon.SecurityCheck do
   @moduledoc """
-  Runs the security monitor loop formerly encoded in ops-notifications.
+  Runs the Beacon security monitor loop.
   """
 
   @type opts :: %{

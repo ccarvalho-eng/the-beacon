@@ -1,6 +1,6 @@
 defmodule TheBeacon.Workflows.SecurityCheck do
   @moduledoc """
-  Squid Mesh workflow that replaces the ops-notifications security GitHub Action.
+  Squid Mesh workflow for scheduled security checks.
   """
 
   use SquidMesh.Workflow
