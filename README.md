@@ -38,6 +38,38 @@ No Phoenix app, dashboard, or GitHub repository commits are required.
 export BEACON_WEBHOOKS='["https://discord.com/api/webhooks/..."]'
 ```
 
+For local development, keep secrets in `.env.local` and source it before
+starting the app:
+
+```sh
+source .env.local
+```
+
+Do not commit `.env.local` or paste webhook URLs into logs, issues, PRs, or
+screenshots.
+
+### Discord Webhook Setup
+
+Use a private Discord server or private channel for Beacon notifications:
+
+1. In Discord, create a server with **Add a Server** and **Create My Own**.
+2. Create a private text channel for Beacon notifications.
+3. Open **Server Settings** or the channel settings, then **Integrations** and
+   **Webhooks**.
+4. Create a webhook, choose the Beacon notification channel, and copy the
+   webhook URL.
+5. Store the URL as a JSON list:
+
+   ```sh
+   export BEACON_WEBHOOKS='["https://discord.com/api/webhooks/..."]'
+   ```
+
+Discord’s own docs cover the moving UI details:
+
+- [Create a server](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)
+- [Intro to webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+- [Server integrations](https://support.discord.com/hc/en-us/articles/360045093012-Server-Integrations-Page)
+
 The security check schedule is declared by the Squid Mesh workflow:
 
 ```elixir
@@ -121,3 +153,28 @@ Bedrock [Elixir.TheBeacon.BedrockCluster]: Leader waiting for TSL restoration fr
 That is normal Bedrock startup output. The important distinction is whether the
 VM stays alive: use `run --no-halt` for service mode or `iex` for interactive
 mode.
+
+## Smoke Test
+
+Run the repeatable local smoke from a stopped app:
+
+```sh
+source .env.local
+elixir --sname beacon_smoke -S mix run --no-start scripts/security_smoke.exs -- --reset --timeout 120000
+```
+
+The script removes local runtime state when `--reset` is passed, starts Beacon,
+enqueues a due security schedule job, waits for the Bedrock queue to consume it,
+and drains Squid Mesh until the workflow reaches a terminal state. It prints
+queue counts, run status, and step status, but never prints webhook values.
+
+To test queue and workflow startup without posting to Discord:
+
+```sh
+BEACON_WEBHOOKS='[]' elixir --sname beacon_smoke -S mix run --no-start scripts/security_smoke.exs -- --reset --timeout 120000
+```
+
+With `BEACON_WEBHOOKS=[]`, the workflow can still fail at
+`deliver_security_notifications` if new advisories are fetched. That proves
+Bedrock scheduling and Squid Mesh execution are working, but not Discord
+delivery.

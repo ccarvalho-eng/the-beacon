@@ -106,7 +106,12 @@ defmodule TheBeacon.WorkflowTest do
     assert_receive {:enqueued, "security", "squid_mesh:payload", payload, [id: payload_id]}
 
     assert payload_id == "security-check:2026-06-02T12:15:00Z"
-    assert is_map(payload)
+    assert %{raw: raw} = Bedrock.JobQueue.Payload.decode(Jason.encode!(payload))
+
+    assert raw == Map.fetch!(payload, :raw)
+    assert {:ok, cron_payload} = Jason.decode(Map.fetch!(payload, :raw))
+    assert cron_payload["kind"] == "cron"
+    assert cron_payload["trigger"] == "scheduled_security_check"
   end
 
   test "bedrock payload job delivers Squid Mesh payload and drains visible attempts" do
@@ -118,6 +123,27 @@ defmodule TheBeacon.WorkflowTest do
              )
 
     assert_receive {:payload_delivered, %{workflow: "security_check"}}
+    assert_receive :drained_once
+  end
+
+  test "bedrock payload job decodes raw JSON payloads from JobQueue fallback" do
+    payload =
+      SquidMesh.Executor.Payload.cron(SecurityCheck, :scheduled_security_check,
+        signal_id: "security-check:2026-06-02T12:15:00Z",
+        intended_window: %{
+          "start_at" => "2026-06-02T12:15:00Z",
+          "end_at" => "2026-06-02T12:15:00Z"
+        }
+      )
+
+    assert :ok =
+             TheBeacon.Jobs.SquidMeshPayload.perform(
+               %{raw: Jason.encode!(payload)},
+               %{},
+               runtime: FakeRuntime
+             )
+
+    assert_receive {:payload_delivered, ^payload}
     assert_receive :drained_once
   end
 

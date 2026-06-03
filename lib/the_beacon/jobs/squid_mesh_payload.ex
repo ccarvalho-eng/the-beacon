@@ -16,10 +16,24 @@ defmodule TheBeacon.Jobs.SquidMeshPayload do
   def perform(payload, _meta, opts) when is_map(payload) do
     runtime = Keyword.get(opts, :runtime, TheBeacon.Runtime)
 
-    case runtime.deliver_payload(payload) do
-      :ok -> drain_journal_attempts(runtime, 0)
-      {:ok, _snapshot} -> drain_journal_attempts(runtime, 0)
-      {:error, reason} -> {:error, reason}
+    with {:ok, payload} <- normalize_payload(payload) do
+      case runtime.deliver_payload(payload) do
+        :ok -> drain_journal_attempts(runtime, 0)
+        {:ok, _snapshot} -> drain_journal_attempts(runtime, 0)
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  end
+
+  defp normalize_payload(%{raw: raw}) when is_binary(raw), do: decode_raw_payload(raw)
+  defp normalize_payload(%{"raw" => raw}) when is_binary(raw), do: decode_raw_payload(raw)
+  defp normalize_payload(payload), do: {:ok, payload}
+
+  defp decode_raw_payload(raw) do
+    case Jason.decode(raw) do
+      {:ok, payload} when is_map(payload) -> {:ok, payload}
+      {:ok, _payload} -> {:error, {:invalid_runtime_payload, :expected_map}}
+      {:error, reason} -> {:error, {:invalid_runtime_payload, reason}}
     end
   end
 

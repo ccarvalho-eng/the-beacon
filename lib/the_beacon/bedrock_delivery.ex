@@ -19,11 +19,15 @@ defmodule TheBeacon.BedrockDelivery do
         intended_window: intended_window(scheduled_for)
       )
 
-    case job_queue.enqueue(queue_id, @topic, payload, id: signal_id) do
+    case job_queue.enqueue(queue_id, @topic, raw_payload(payload), id: signal_id) do
       {:ok, item} -> {:ok, metadata(item, queue_id, @topic)}
       {:error, reason} -> {:error, reason}
       other -> {:error, {:unexpected_enqueue_result, other}}
     end
+  end
+
+  defp raw_payload(payload) do
+    %{raw: Jason.encode!(payload)}
   end
 
   defp intended_window(scheduled_for) do
