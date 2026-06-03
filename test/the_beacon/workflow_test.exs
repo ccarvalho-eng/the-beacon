@@ -54,17 +54,31 @@ defmodule TheBeacon.WorkflowTest do
            )
 
     assert Enum.map(spec.steps, & &1.name) == [
+             :log_security_check_started,
              :fetch_security_events,
              :filter_seen_events,
              :deliver_security_notifications,
-             :mark_seen_events
+             :mark_seen_events,
+             :log_security_check_completed
            ]
 
+    assert %{
+             module: :log,
+             opts: [message: "Security check started", level: :info]
+           } = Enum.find(spec.steps, &(&1.name == :log_security_check_started))
+
+    assert %{
+             module: :log,
+             opts: [message: "Security check completed", level: :info]
+           } = Enum.find(spec.steps, &(&1.name == :log_security_check_completed))
+
     assert Enum.map(spec.transitions, &{&1.from, &1.on, &1.to}) == [
+             {:log_security_check_started, :ok, :fetch_security_events},
              {:fetch_security_events, :ok, :filter_seen_events},
              {:filter_seen_events, :ok, :deliver_security_notifications},
              {:deliver_security_notifications, :ok, :mark_seen_events},
-             {:mark_seen_events, :ok, :complete}
+             {:mark_seen_events, :ok, :log_security_check_completed},
+             {:log_security_check_completed, :ok, :complete}
            ]
   end
 
