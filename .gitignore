@@ -27,3 +27,6 @@ the_beacon-*.tar
 
 # Local runtime secrets.
 .env.local
+
+# Local seen-state written by security workflow smoke/manual runs.
+/state/security-seen.txt
