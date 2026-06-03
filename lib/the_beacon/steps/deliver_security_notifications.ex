@@ -7,11 +7,13 @@ defmodule TheBeacon.Steps.DeliverSecurityNotifications do
     name: :deliver_security_notifications,
     description: "Sends webhook notifications for unseen security advisories",
     input_schema: [
+      state_file: [type: :string, required: true],
       events: [type: :list, required: true],
       checked_count: [type: :integer, required: true],
       new_count: [type: :integer, required: true]
     ],
     output_schema: [
+      state_file: [type: :string, required: true],
       events: [type: :list, required: true],
       checked_count: [type: :integer, required: true],
       new_count: [type: :integer, required: true],
@@ -35,6 +37,7 @@ defmodule TheBeacon.Steps.DeliverSecurityNotifications do
 
         {:ok,
          %{
+           state_file: input.state_file,
            events: events,
            checked_count: input.checked_count,
            new_count: input.new_count,

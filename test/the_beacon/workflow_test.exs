@@ -72,9 +72,6 @@ defmodule TheBeacon.WorkflowTest do
              opts: [message: "Security check completed", level: :info]
            } = Enum.find(spec.steps, &(&1.name == :log_security_check_completed))
 
-    delivery_step = Enum.find(spec.steps, &(&1.name == :deliver_security_notifications))
-    assert Keyword.fetch!(delivery_step.opts, :irreversible) == true
-
     assert Enum.map(spec.transitions, &{&1.from, &1.on, &1.to}) == [
              {:log_security_check_started, :ok, :fetch_security_events},
              {:fetch_security_events, :ok, :filter_seen_events},

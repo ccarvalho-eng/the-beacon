@@ -94,6 +94,7 @@ defmodule TheBeacon.SecuritySmoke do
     print_run_summary(final_run)
 
     if final_run.terminal_status == :completed do
+      verify_seen_state!(final_run.run_id)
       IO.puts("security smoke passed")
     else
       IO.puts(:stderr, "security smoke failed")
@@ -211,6 +212,8 @@ defmodule TheBeacon.SecuritySmoke do
   defp print_attempt_summary(run_id) do
     case SquidMesh.inspect_run(run_id, TheBeacon.Runtime.squid_mesh_opts()) do
       {:ok, snapshot} ->
+        IO.inspect(snapshot_summary(snapshot), label: "snapshot")
+
         attempts = Enum.map(snapshot.attempts, &attempt_summary/1)
         IO.inspect(attempts, label: "attempts")
 
@@ -219,14 +222,90 @@ defmodule TheBeacon.SecuritySmoke do
     end
   end
 
+  defp snapshot_summary(snapshot) do
+    %{
+      reason: Map.get(snapshot, :reason),
+      planned_runnable_keys: Map.get(snapshot, :planned_runnable_keys),
+      applied_runnable_keys: Map.get(snapshot, :applied_runnable_keys),
+      pending_dispatch_count: length(Map.get(snapshot, :pending_dispatches) || []),
+      pending_result_count: length(Map.get(snapshot, :pending_results) || []),
+      visible_attempt_count: length(Map.get(snapshot, :visible_attempts) || []),
+      scheduled_attempt_count: length(Map.get(snapshot, :scheduled_attempts) || []),
+      command_history_count: length(Map.get(snapshot, :command_history) || [])
+    }
+  end
+
   defp attempt_summary(attempt) do
     %{
       step: Map.get(attempt, :step) || Map.get(attempt, "step"),
       status: Map.get(attempt, :status) || Map.get(attempt, "status"),
       applied?: Map.get(attempt, :applied?) || Map.get(attempt, "applied?"),
+      transition: redact(Map.get(attempt, :transition) || Map.get(attempt, "transition")),
       error: redact(Map.get(attempt, :error) || Map.get(attempt, "error"))
     }
   end
+
+  defp verify_seen_state!(run_id) do
+    case SquidMesh.inspect_run(run_id, TheBeacon.Runtime.squid_mesh_opts()) do
+      {:ok, snapshot} ->
+        state_file = state_file(snapshot)
+        delivered_ids = delivered_event_ids(snapshot)
+
+        verify_seen_state_file!(state_file, delivered_ids)
+
+      {:error, reason} ->
+        fail!("could not inspect run for seen-state verification: #{safe_inspect(reason)}")
+    end
+  end
+
+  defp state_file(snapshot) do
+    input = Map.get(snapshot, :input) || %{}
+
+    Map.get(input, :state_file) ||
+      Map.get(input, "state_file") ||
+      @default_state_file
+  end
+
+  defp delivered_event_ids(snapshot) do
+    context = Map.get(snapshot, :context) || %{}
+
+    delivered =
+      Map.get(context, :delivered_security_events) ||
+        Map.get(context, "delivered_security_events") || %{}
+
+    events = Map.get(delivered, :events) || Map.get(delivered, "events") || []
+
+    Enum.map(events, &event_id!/1)
+  end
+
+  defp verify_seen_state_file!(_state_file, []) do
+    IO.puts("seen-state verification skipped: no delivered events")
+  end
+
+  defp verify_seen_state_file!(state_file, delivered_ids) do
+    unless File.exists?(state_file) do
+      fail!("seen-state file was not created at #{state_file}")
+    end
+
+    seen_ids =
+      state_file
+      |> File.read!()
+      |> String.split("\n", trim: true)
+      |> MapSet.new()
+
+    missing_ids = Enum.reject(delivered_ids, &MapSet.member?(seen_ids, &1))
+
+    if missing_ids == [] do
+      IO.puts("seen-state verified: #{length(delivered_ids)} delivered ids recorded")
+    else
+      fail!("seen-state file missing delivered ids: #{safe_inspect(missing_ids)}")
+    end
+  end
+
+  defp event_id!(%{id: id}) when is_binary(id), do: id
+  defp event_id!(%{"id" => id}) when is_binary(id), do: id
+  defp event_id!(id) when is_binary(id), do: id
+  defp event_id!(event), do: fail!("delivered event is missing an id: #{safe_inspect(event)}")
 
   defp queue_stats do
     TheBeacon.JobQueue.stats(TheBeacon.JobQueue.queue_id())

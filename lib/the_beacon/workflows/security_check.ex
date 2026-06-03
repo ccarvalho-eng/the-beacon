@@ -46,12 +46,12 @@ defmodule TheBeacon.Workflows.SecurityCheck do
 
     step :deliver_security_notifications, DeliverSecurityNotifications,
       input: [
+        state_file: [:unseen_security_events, :state_file],
         events: [:unseen_security_events, :events],
         checked_count: [:unseen_security_events, :checked_count],
         new_count: [:unseen_security_events, :new_count]
       ],
       output: :delivered_security_events,
-      irreversible: true,
       retry: [max_attempts: 3, backoff: [type: :exponential, min: 1_000, max: 30_000]]
 
     step :mark_seen_events, MarkSeenEvents,

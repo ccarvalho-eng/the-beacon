@@ -14,7 +14,7 @@ defmodule TheBeacon.SecurityStepsTest do
 
     SeenFile.mark_seen(path, [seen])
 
-    assert {:ok, %{events: [^unseen], checked_count: 2, new_count: 1}} =
+    assert {:ok, %{state_file: ^path, events: [^unseen], checked_count: 2, new_count: 1}} =
              FilterSeenEvents.run(%{state_file: path, events: [seen, unseen]}, %{})
   end
 
@@ -29,10 +29,33 @@ defmodule TheBeacon.SecurityStepsTest do
     end)
 
     event = %Event{id: "GHSA-new", source: "GitHub", title: "new", url: "https://ghsa.test/new"}
+    path = state_file()
 
     assert {:retry, :no_webhooks_configured} =
              DeliverSecurityNotifications.run(
-               %{webhooks: [], events: [event], checked_count: 1, new_count: 1},
+               %{state_file: path, events: [event], checked_count: 1, new_count: 1},
+               %{}
+             )
+  end
+
+  test "delivery carries state file forward for the mark seen step" do
+    original_webhooks = System.get_env("BEACON_WEBHOOKS")
+    System.put_env("BEACON_WEBHOOKS", "[]")
+
+    on_exit(fn ->
+      if original_webhooks do
+        System.put_env("BEACON_WEBHOOKS", original_webhooks)
+      else
+        System.delete_env("BEACON_WEBHOOKS")
+      end
+    end)
+
+    path = state_file()
+
+    assert {:ok,
+            %{state_file: ^path, events: [], checked_count: 1, new_count: 0, delivered_count: 0}} =
+             DeliverSecurityNotifications.run(
+               %{state_file: path, events: [], checked_count: 1, new_count: 0},
                %{}
              )
   end

@@ -13,6 +13,7 @@ defmodule TheBeacon.Steps.FilterSeenEvents do
       events: [type: :list, required: true]
     ],
     output_schema: [
+      state_file: [type: :string, required: true],
       events: [type: :list, required: true],
       checked_count: [type: :integer, required: true],
       new_count: [type: :integer, required: true]
@@ -34,6 +35,7 @@ defmodule TheBeacon.Steps.FilterSeenEvents do
 
     {:ok,
      %{
+       state_file: state_file,
        events: unseen_events,
        checked_count: length(events),
        new_count: length(unseen_events)
