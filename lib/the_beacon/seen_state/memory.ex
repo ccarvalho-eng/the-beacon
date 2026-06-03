@@ -1,6 +1,6 @@
 defmodule TheBeacon.SeenState.Memory do
   @moduledoc """
-  In-memory seen-state store for tests and local smoke runs.
+  In-memory seen-state store for tests and local runs.
   """
 
   use Agent

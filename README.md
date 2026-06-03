@@ -154,27 +154,37 @@ That is normal Bedrock startup output. The important distinction is whether the
 VM stays alive: use `run --no-halt` for service mode or `iex` for interactive
 mode.
 
-## Smoke Test
+## Manual Test
 
-Run the repeatable local smoke from a stopped app:
+Start an interactive local node:
 
 ```sh
 source .env.local
-elixir --sname beacon_smoke -S mix run --no-start scripts/security_smoke.exs -- --reset --timeout 120000
+iex --sname beacon -S mix
 ```
 
-The script removes local runtime state when `--reset` is passed, starts Beacon,
-enqueues a due security schedule job, waits for the Bedrock queue to consume it,
-and drains Squid Mesh until the workflow reaches a terminal state. It prints
-queue counts, run status, and step status, but never prints webhook values.
+Then enqueue a due security schedule job:
 
-To test queue and workflow startup without posting to Discord:
+```elixir
+scheduled_for = DateTime.add(DateTime.utc_now(), -1, :second)
 
-```sh
-BEACON_WEBHOOKS='[]' elixir --sname beacon_smoke -S mix run --no-start scripts/security_smoke.exs -- --reset --timeout 120000
+TheBeacon.JobQueue.enqueue(
+  TheBeacon.JobQueue.queue_id(),
+  "beacon:schedule:security",
+  %{scheduled_for: DateTime.to_iso8601(scheduled_for)},
+  at: scheduled_for,
+  id: "manual-security-schedule:" <> DateTime.to_iso8601(scheduled_for)
+)
 ```
 
-With `BEACON_WEBHOOKS=[]`, the workflow can still fail at
-`deliver_security_notifications` if new advisories are fetched. That proves
-Bedrock scheduling and Squid Mesh execution are working, but not Discord
-delivery.
+Useful checks while it runs:
+
+```elixir
+TheBeacon.JobQueue.stats(TheBeacon.JobQueue.queue_id())
+SquidMesh.list_runs([], TheBeacon.Runtime.squid_mesh_opts())
+File.exists?("state/security-seen.txt")
+```
+
+When new advisories are delivered, the workflow should log delivery, mark those
+events seen, and complete. The seen-state file is local runtime state and is
+ignored by git.
