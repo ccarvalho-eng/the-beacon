@@ -40,7 +40,7 @@ defmodule TheBeacon.WorkflowTest do
   end
 
   test "security workflow exposes manual and scheduled security check triggers" do
-    assert {:ok, spec} = SquidMesh.Workflow.to_spec(SecurityCheck)
+    assert {:ok, spec} = Squidie.Workflow.to_spec(SecurityCheck)
 
     trigger_names = Enum.map(spec.triggers, & &1.name)
     assert :security_check in trigger_names
@@ -82,7 +82,7 @@ defmodule TheBeacon.WorkflowTest do
            ]
   end
 
-  test "bedrock scheduler enqueues the next schedule and a Squid Mesh payload job" do
+  test "bedrock scheduler enqueues the next schedule and a Squidie payload job" do
     scheduled_for = ~U[2026-06-02 12:15:00Z]
 
     assert {:ok, :scheduled} =
@@ -100,7 +100,7 @@ defmodule TheBeacon.WorkflowTest do
                     %{cron_expression: "*/15 * * * *", scheduled_for: "2026-06-02T12:30:00Z"},
                     [at: ~U[2026-06-02 12:30:00Z], id: "security-schedule:2026-06-02T12:30:00Z"]}
 
-    assert_receive {:enqueued, "security", "squid_mesh:payload", payload, [id: payload_id]}
+    assert_receive {:enqueued, "security", "squidie:payload", payload, [id: payload_id]}
 
     assert payload_id == "security-check:2026-06-02T12:15:00Z"
     assert %{raw: raw} = Bedrock.JobQueue.Payload.decode(Jason.encode!(payload))
@@ -111,9 +111,9 @@ defmodule TheBeacon.WorkflowTest do
     assert cron_payload["trigger"] == "scheduled_security_check"
   end
 
-  test "bedrock payload job delivers Squid Mesh payload and drains visible attempts" do
+  test "bedrock payload job delivers Squidie payload and drains visible attempts" do
     assert :ok =
-             TheBeacon.Jobs.SquidMeshPayload.perform(
+             TheBeacon.Jobs.SquidiePayload.perform(
                %{workflow: "security_check"},
                %{},
                runtime: FakeRuntime
@@ -125,7 +125,7 @@ defmodule TheBeacon.WorkflowTest do
 
   test "bedrock payload job decodes raw JSON payloads from JobQueue fallback" do
     payload =
-      SquidMesh.Executor.Payload.cron(SecurityCheck, :scheduled_security_check,
+      Squidie.Executor.Payload.cron(SecurityCheck, :scheduled_security_check,
         signal_id: "security-check:2026-06-02T12:15:00Z",
         intended_window: %{
           "start_at" => "2026-06-02T12:15:00Z",
@@ -134,7 +134,7 @@ defmodule TheBeacon.WorkflowTest do
       )
 
     assert :ok =
-             TheBeacon.Jobs.SquidMeshPayload.perform(
+             TheBeacon.Jobs.SquidiePayload.perform(
                %{raw: Jason.encode!(payload)},
                %{},
                runtime: FakeRuntime
@@ -174,7 +174,7 @@ defmodule TheBeacon.WorkflowTest do
                scheduled_for: scheduled_for
              )
 
-    assert_receive {:enqueued, "security", "squid_mesh:payload", _payload, _opts}
+    assert_receive {:enqueued, "security", "squidie:payload", _payload, _opts}
   end
 
   test "application runtime children start by default with Bedrock JobQueue" do
@@ -191,27 +191,27 @@ defmodule TheBeacon.WorkflowTest do
     refute TheBeacon.Worker in child_ids
   end
 
-  test "application configures Squid Mesh runtime for manual workflow starts" do
-    previous_repo = Application.get_env(:squid_mesh, :repo)
-    previous_journal_storage = Application.get_env(:squid_mesh, :journal_storage)
+  test "application configures Squidie runtime for manual workflow starts" do
+    previous_repo = Application.get_env(:squidie, :repo)
+    previous_journal_storage = Application.get_env(:squidie, :journal_storage)
 
-    Application.delete_env(:squid_mesh, :repo)
-    Application.delete_env(:squid_mesh, :journal_storage)
+    Application.delete_env(:squidie, :repo)
+    Application.delete_env(:squidie, :journal_storage)
 
     on_exit(fn ->
       restore_env(:repo, previous_repo)
       restore_env(:journal_storage, previous_journal_storage)
     end)
 
-    TheBeacon.Runtime.configure_squid_mesh!()
+    TheBeacon.Runtime.configure_squidie!()
 
-    assert Application.get_env(:squid_mesh, :repo) == TheBeacon.BedrockRepo
+    assert Application.get_env(:squidie, :repo) == TheBeacon.BedrockRepo
 
-    assert {Jido.Storage.File, path: "tmp/squid_mesh_journal"} =
-             Application.get_env(:squid_mesh, :journal_storage)
+    assert {Jido.Storage.File, path: "tmp/squidie_journal"} =
+             Application.get_env(:squidie, :journal_storage)
   end
 
-  test "runtime drains with public Squid Mesh execute options" do
+  test "runtime drains with public Squidie execute options" do
     opts =
       TheBeacon.Runtime.execute_next_opts(owner_id: "test-worker", heartbeat_interval_ms: 1_000)
 
@@ -219,7 +219,7 @@ defmodule TheBeacon.WorkflowTest do
     assert Keyword.fetch!(opts, :owner_id) == "test-worker"
     assert Keyword.fetch!(opts, :heartbeat_interval_ms) == 1_000
 
-    assert {Jido.Storage.File, path: "tmp/squid_mesh_journal"} =
+    assert {Jido.Storage.File, path: "tmp/squidie_journal"} =
              Keyword.fetch!(opts, :journal_storage)
   end
 
@@ -229,17 +229,17 @@ defmodule TheBeacon.WorkflowTest do
              repo: TheBeacon.BedrockRepo,
              workers: %{
                "beacon:schedule:security" => TheBeacon.Jobs.SecuritySchedule,
-               "squid_mesh:payload" => TheBeacon.Jobs.SquidMeshPayload
+               "squidie:payload" => TheBeacon.Jobs.SquidiePayload
              }
            } = TheBeacon.JobQueue.__config__()
 
     assert %{topic: "beacon:schedule:security", max_retries: 3, priority: 100} =
              TheBeacon.Jobs.SecuritySchedule.__job_config__()
 
-    assert %{topic: "squid_mesh:payload", max_retries: 3, priority: 100} =
-             TheBeacon.Jobs.SquidMeshPayload.__job_config__()
+    assert %{topic: "squidie:payload", max_retries: 3, priority: 100} =
+             TheBeacon.Jobs.SquidiePayload.__job_config__()
   end
 
   defp restore_env(_key, nil), do: :ok
-  defp restore_env(key, value), do: Application.put_env(:squid_mesh, key, value)
+  defp restore_env(key, value), do: Application.put_env(:squidie, key, value)
 end

@@ -5,7 +5,7 @@ defmodule TheBeacon.Steps.MarkSeenEvents do
 
   @default_state_file "state/security-seen.txt"
 
-  use SquidMesh.Step,
+  use Squidie.Step,
     name: :mark_seen_events,
     description: "Persists delivered advisory IDs to the seen-state file",
     input_schema: [

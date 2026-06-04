@@ -1,12 +1,12 @@
 defmodule TheBeacon.WebhookDeliveryTest do
   use ExUnit.Case, async: true
 
-  alias SquidMesh.Tools.Result
+  alias Squidie.Tools.Result
   alias TheBeacon.Event
   alias TheBeacon.Notifications.WebhookDelivery
 
   defmodule FakeHTTP do
-    @behaviour SquidMesh.Tools.Adapter
+    @behaviour Squidie.Tools.Adapter
 
     @impl true
     def invoke(%{method: :post, url: url, json: %{content: content}} = request, _context, _opts) do

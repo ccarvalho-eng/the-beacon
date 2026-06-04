@@ -1,9 +1,9 @@
 defmodule TheBeacon.Workflows.SecurityCheck do
   @moduledoc """
-  Squid Mesh workflow for scheduled security checks.
+  Squidie workflow for scheduled security checks.
   """
 
-  use SquidMesh.Workflow
+  use Squidie.Workflow
 
   alias TheBeacon.Steps.{
     DeliverSecurityNotifications,

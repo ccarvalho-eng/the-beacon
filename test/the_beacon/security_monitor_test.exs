@@ -1,11 +1,11 @@
 defmodule TheBeacon.SecurityMonitorTest do
   use ExUnit.Case, async: true
 
-  alias SquidMesh.Tools.Result
+  alias Squidie.Tools.Result
   alias TheBeacon.Monitors.Security
 
   defmodule FakeHTTP do
-    @behaviour SquidMesh.Tools.Adapter
+    @behaviour Squidie.Tools.Adapter
 
     @impl true
     def invoke(%{method: :get, url: "https://osv.test/Hex/all.zip"} = request, _context, _opts) do

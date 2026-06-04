@@ -101,7 +101,7 @@ defmodule TheBeacon.BedrockScheduler do
 
   defp security_cron do
     SecurityCheck
-    |> SquidMesh.Workflow.Info.triggers()
+    |> Squidie.Workflow.Info.triggers()
     |> Enum.find(&(&1.name == @security_trigger))
     |> case do
       %{type: :cron, config: %{expression: expression}} when is_binary(expression) ->

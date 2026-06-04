@@ -3,7 +3,7 @@ defmodule TheBeacon.Steps.FetchSecurityEvents do
   Fetches security advisory events from all configured monitor sources.
   """
 
-  use SquidMesh.Step,
+  use Squidie.Step,
     name: :fetch_security_events,
     description: "Fetches and normalizes Elixir ecosystem security advisories",
     input_schema: [],

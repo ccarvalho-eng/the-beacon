@@ -7,7 +7,7 @@ defmodule TheBeacon.Application do
 
   @impl true
   def start(_type, _args) do
-    TheBeacon.Runtime.configure_squid_mesh!()
+    TheBeacon.Runtime.configure_squidie!()
 
     opts = [strategy: :one_for_one, name: TheBeacon.Supervisor]
     Supervisor.start_link(runtime_children(), opts)

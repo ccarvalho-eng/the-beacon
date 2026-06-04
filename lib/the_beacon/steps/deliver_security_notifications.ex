@@ -3,7 +3,7 @@ defmodule TheBeacon.Steps.DeliverSecurityNotifications do
   Delivers unseen security advisories to configured webhooks.
   """
 
-  use SquidMesh.Step,
+  use Squidie.Step,
     name: :deliver_security_notifications,
     description: "Sends webhook notifications for unseen security advisories",
     input_schema: [
